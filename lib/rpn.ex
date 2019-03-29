@@ -1,12 +1,15 @@
 defmodule Rpn do
 
-  use Application
+  defdelegate new(), to: Rpn.Engine.Supervisor, as: :start_child
 
-  def start(_type, _args) do
-    case Rpn.Supervisor.start_link() do
-      {:ok, pid} when is_pid(pid) ->
-        {:ok, pid}
-    end
-  end
+  defdelegate new(name), to: Rpn.Engine.Supervisor, as: :start_child
+
+  defdelegate push(pid, op), to: Rpn.Engine
+
+  defdelegate reset(pid), to: Rpn.Engine
+
+  defdelegate peek(pid), to: Rpn.Engine
+
+  defdelegate stop(pid), to: Rpn.Engine, as: :destroy
 
 end

@@ -7,26 +7,45 @@ defmodule Rpn.Engine do
   use GenServer
 
   # Client API
-  def start_link(_) do
-    GenServer.start_link(__MODULE__, :na, name: __MODULE__)
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, :na, opts)
   end
 
-  def push(rpn_pid, item) do
-    GenServer.call(rpn_pid, {:push, item})
+  defp via_name(pid) when is_pid(pid) do
+    pid
+  end
+  defp via_name(name) do
+    {:via, Registry, {Rpn.Registry, name}}
   end
 
-  def peek(rpn_pid) do
-    GenServer.call(rpn_pid, :peek)
+  def child_spec(opts) do
+    %{
+      id: Keyword.get(opts, :name, __MODULE__),
+      start: {__MODULE__, :start_link, [opts]},
+      restart: Keyword.get(opts, :restart, :transient),
+      type: :worker
+    }
   end
 
-  def reset(rpn_pid) do
-    GenServer.cast(rpn_pid, :reset)
+  def push(name, item) do
+    GenServer.call(via_name(name), {:push, item})
+  end
+
+  def peek(name) do
+    GenServer.call(via_name(name), :peek)
+  end
+
+  def reset(name) do
+    GenServer.cast(via_name(name), :reset)
+  end
+
+  def stop(name) do
+    GenServer.stop(via_name(name))
   end
 
   # Server callbacks
   @impl true
   def init(:na) do
-    IO.inspect "Got started by supervisor"
     {:ok, []}
   end
 
@@ -36,7 +55,7 @@ defmodule Rpn.Engine do
   end
 
   @impl true
-  def handle_call({:push, number}, from, state) when is_number(number) do
+  def handle_call({:push, number}, _from, state) when is_number(number) do
     {:reply, :ok, [number | state]}
   end
 
